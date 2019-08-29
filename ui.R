@@ -111,19 +111,28 @@ ui <- fluidPage(
         )
       
       ),
-    
+
     # Main panel for displaying outputs ----
     mainPanel(
+      tabsetPanel(
+        tabPanel("Chart",
+                 plotOutput(outputId = "distPlot")),
+        tabPanel("Signals",
+                 tableOutput("signals")
+        )
+      )
+      
       
       # actionButton(inputId = "action_cusum", 
       #              label = "Calculate CUSUM",
       #              icon = icon("procedures")),
-      
-      h3("CUSUM Chart"),
-      plotOutput(outputId = "distPlot"),
-      
-      h3("CUSUM Signals"),
-      tableOutput("signals")
-      )
+      # 
+      # h3("CUSUM Chart"),
+      # plotOutput(outputId = "distPlot"),
+      # 
+      # h3("CUSUM Signals"),
+      # tableOutput("signals")
+      # )
     )
   )
+)
