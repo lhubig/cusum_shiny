@@ -1,0 +1,184 @@
+---
+title: "How to customize reactions"
+author: "Lena Hubig"
+date: "29 8 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+* Every Shiny app is maintained by a computer running R
+
+Template:
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  # input
+  
+  # output (build in the server function)
+)
+
+server <- function(input, outout) {
+  # output$name <- renderFunction{
+  # call input$ function
+  # }
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+* share apps: shinyapps.io or own shiny server
+
+## Reactivity
+
+* reacts to new input data
+* input object -> output object
+
+### Reactive Values
+
+Input objetct will create input$ and is always up to date
+
+-> input$ can only be called in reactive functions (render or reactive)
+
+1. reactive values notify the funcitons that use them when they become invalid (invalidading)
+2. the objects created by reactive functions respond (different objects respond differently)
+
+* act as data streams that flow through your app
+
+* the input list is a list of reactive values. The values show the current state of the inputs. 
+
+You can only call a reactive value from a function that is designed to work with one
+
+### Reactive toolkit (7 functions)
+
+1. Use a code chunk to build (and rebuild) an object
+2. The object will respond to changes in a set of reactive values
+
+?What code would the functon use to build the object?
+? What reactive would the function respond to
+
+#### Display output with render*()
+
+renderDataTable | an interactive table
+renderImage | an image
+renderPlot | a plot
+renderPring | a code block of printed output
+renderTable | a table (from a data frame, matrix or table-like structure)
+renderText | A character string
+renderUI | a Shiny UI element
+
+-> one code that tells how to build the object
+
+-> respondes for all input reactive values
+
+-> runs the whole plot for every changing reactive value
+
+```{r}
+renderPlot( { hist(rnorm(input$num)) } )
+```
+
+* render*() functions make objects to display
+* Always save the result to output$
+* render*() makes an observer object that has a block of code associated with it
+* The object will rerun the entire block of code to update itself
+
+####  Build a reactive object reactive()
+
+reactive expression
+
+```{r}
+data <- reactive({rnorm(input$num)})
+```
+
+1. You call a reactive expression like a function  `data()`
+2. Reactive exrpessions cache their values
+
+
+* reactive() makes an object to use (in downstram code)
+* reactive expressions are themselves reactive. Use them to modularize your apps
+* Call a reactive expression like a function
+* Reactive expressions cache their values to avoid unnecessary computation
+
+#### Prevent reactions: isolate()
+
+prevents the app to update itself
+returns the result as a non-reactive value
+
+```{r}
+isolate({rnornm(input$num)})
+```
+
+Object will NOT respond to any reactive value:
+```{r}
+output$hist <- renderPlot({
+  hist(rnorm(input$num),
+       main = isolate({input$title}))
+})
+```
+
+
+* isolate() makes an non-reactive object
+* Use isolate() to treat reactive values like normal R values
+
+#### Trigger code: observeEvent()
+
+used with actionButton
+
+Trigger code of this button with observeEvent()
+
+```{r}
+observeEvent(input$clicks, {print(input$clicks)})
+```
+
+Similar function: observe()
+reruns code every time reactive values changes
+```{r}
+observe({ print(input$clicks)})
+```
+
+* observeEvent() triggers code to run on the server
+* Specify precisely which reactive values should invalidate the observer
+* Use observe() for a more implicit syntax
+
+#### Delay reactions eventReactive()
+
+A reactive expression that only responds to specific values
+
+```{r}
+data <- eventReactive(input$click, {rnorm(input$num)})
+```
+
+* Use eventReactive() to delay reactions
+* eventReactive() creates a reactive expression
+* You can specify precisely which reactive valeus should invalidate the function
+
+#### Manage state: reactiveValues()
+
+creates a list of reactive values to manipulate programmatically
+
+```{r}
+rv <- reactiveValues(data = rnorm(100))
+```
+
+persistent state with reactiveValues
+returns list or we
+
+* reactiveValues() creates a list of reactive values
+* You can manipulate these values (usually with observEvent())
+*
+
+# Tips
+
+* reduce repetition: Place code where it will be re-run as little as necessary
+    * code outside the server function will be run once per R session (worker)
+    * code inside the server function will run once per end user (connection)
+    * code inside reactive functions will be run once per reaction (e.g. many times)
+* How can R possibly implement reactivity? : read-up on: hhtps://shiny.rstudio.com/articles/understanding-reactivity.htlml
+
+

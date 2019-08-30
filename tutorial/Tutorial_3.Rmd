@@ -1,0 +1,97 @@
+---
+title: "How to customize shiny apps"
+author: "Lena Hubig"
+date: "29 8 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## User Interface HTML
+
+* Call R functions to assemble HTML
+* The HTML that builds the user interface in your app: `fluidPage` 
+* Use `input*()`and `output*()` functions to add reactive content
+* save the ouput to `ui`
+
+## Static Content
+
+HTML tags are stored in list of functions `tags$h1()`, `tags$a()`
+
+* named arguments appear as tag attributes
+* unnamed arguments appear inside the tags
+
+can also pass raw HTML with HTML("")
+
+## Create a layout
+
+fluidRow()
+* adds row to the grid. Each new row goes below the previous one
+
+column()
+* adds columns within a row. Each new columns goes to the left of the previous column
+* specify the width and offset of each column out of 12
+
+```{r}
+ui <- fluidPage(
+  fluidRow(
+    column(3),
+    column(5,
+           sliderIput(...))
+  ),
+  fluidRow(
+    column(4, offset = 8,
+           plotOutput("hist"))
+  )
+)
+```
+
+## Layers of panels
+
+Panels to group multiple elements into a single unit with its own properties
+
+`wellPanel()`
+groups elements into a grey "well"
+
+* absolutePanel: Panel position set rigidly (absolutely), not fluidly
+* conditionalPanel: A JavaSript expression determines whether panel is visible or not
+* fixedPanel: Panel is fixed to browser window and does not scroll with the page
+* headerPanel: Panel for the apps title, used with pageWithSidebar()
+* inputPanel(Panel with grey background, uistable for grouping inputs)
+* mainPanel: Panel for displaying output, usew with pageWithSidebar()
+* navlistPanel(): Panel for displaying multiple stacked tabPanels(). Uses sidebar navigation
+* sidebarPanel: Panel for displaying a sidebar of inputs, used with pageWithSidebar()
+* tabPanel: Stackable panel. Used with navlistPanel() and tabsetPanel()
+* tabsetPanel: Panel for displaying multiple stacked tabPanels(). Uses tap navigation
+* titlePanel(): Panel for apps title, used with pageWithSidebar()
+* wellPanel: Panel with grey background
+
+* Panels group elements into a single unit for aesthetic or functional reasons
+* Use tabPanel() to create a stackable panel
+* Use tabseltPanel() to arrange tab panels into a stack with tab navigation
+
+## Prepackaged layout
+
+sidebarLayout() 
+* used with sidebarPanel() and mainPanel() to divide app into two sections
+
+navbarPage()
+combines tabs into a single page
+navbarPage() replaces fluidPage(), requires title
+
+navbarMenu()
+combbines tab links into a dropdown menu for navbarPage()
+
+```{r}
+navbarPage(title = "Title",
+           tabPanel("tab1", "contents"),
+           navbarMenu(title = "More",
+                      tabPanel("tab2", "content"),
+                      tabPanel("tab3", "content")))
+```
+
+## CSS
+
+

@@ -1,0 +1,44 @@
+---
+title: "Statistical Process Monitoring"
+author: "Lena Hubig"
+date: "26 8 2019"
+runtime: shiny
+output: ioslides_presentation
+transition: faster
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# In the morning
+## Getting up
+
+- Turon of alarm
+## Breakfast
+- sleep
+
+
+# In the evening
+## Dinner
+- Eat spaghetti
+
+## Going To slepp
+```{r echo = FALSE}
+selectInput("n_breaks", label = "Number of bins:",
+              choices = c(10, 20, 35, 50), selected = 20)
+
+sliderInput("bw_adjust", label = "Bandwidth adjustment:",
+              min = 0.2, max = 2, value = 1, step = 0.2)
+```
+```{r echo = FALSE}
+renderPlot({
+  hist(faithful$eruptions, probability = TRUE,
+       breaks = as.numeric(input$n_breaks),
+       xlab = "Duration (minutes)",
+       main = "Geyser eruption duration")
+
+  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+  lines(dens, col = "blue")
+})
+```
