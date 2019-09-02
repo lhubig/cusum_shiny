@@ -24,17 +24,21 @@ ui <- fluidPage(
             )
           ),
           inputPanel(
+            h4(tags$b("Baseline Failure Probability")),
+            
             sliderInput("failure_prob",
-              label = "Baseline Failure Probability",
+              label = "",
               min = 0,
               max = 50,
               value = 10,
               step = 0.01,
               post = "%"
             ),
+            
+            h4(tags$b("Detection Level")),
 
             sliderInput("detection_level_d",
-              label = "Detection Level (Deterioriation)",
+              label = "Deterioriation",
               min = 1,
               max = 4,
               value = 2,
@@ -42,7 +46,7 @@ ui <- fluidPage(
             ),
             
             sliderInput("detection_level_i",
-                        label = "Detection Level (Improvement) ",
+                        label = "Improvement",
                         min = 0,
                         max = 1,
                         value = 0.5,
@@ -56,8 +60,9 @@ ui <- fluidPage(
           ),
 
           inputPanel(
+            h4(tags$b("Fixed Parameter")),
             radioButtons("fix_term",
-              label = "Fixed Parameter",
+              label = "",
               choices = list(
                 "False Signal Probability (FSP)" = 1,
                 "Control Limit (CL)" = 2
@@ -76,11 +81,17 @@ ui <- fluidPage(
             ),
             conditionalPanel(
               condition = "input.fix_term == 2",
-              sliderInput("control_limit",
-                label = "",
-                min = 1, max = 10,
+              sliderInput("control_limit_d",
+                label = "Deterioriation",
+                min = 0, max = 10,
                 value = 2,
                 step = .01
+              ),
+              sliderInput("control_limit_i",
+                          label = "Improvement",
+                          min = -10, max = 0,
+                          value = -2,
+                          step = .01
               )
             ),
 

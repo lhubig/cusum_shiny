@@ -3,6 +3,11 @@ library(ggplot2)
 library(dplyr)
 library(cowplot)
 
+load("data/example_data.RData")
+load("data/ra_example_data.RData")
+
+
+
 server <- function(input, output, session) {
 
   # Upload data ----
@@ -56,9 +61,9 @@ server <- function(input, output, session) {
   })
 
   # set control limit ----
-  limit <- reactive({
+  limit_d <- reactive({
     if (input$fix_term == 2) {
-      return(input$control_limit)
+      return(input$control_limit_d)
     } else {
       return(round(cusum_limit_sim((input$failure_prob / 100),
         n_patients = nrow(data()),
@@ -68,12 +73,25 @@ server <- function(input, output, session) {
       ), 4))
     }
   })
+  
+  limit_i <- reactive({
+    if (input$fix_term == 2) {
+      return(input$control_limit_i)
+    } else {
+      return(round(cusum_limit_sim((input$failure_prob / 100),
+                                   n_patients = nrow(data()),
+                                   odds_multiplier = input$detection_level_i,
+                                   n_simulation = input$n_sim,
+                                   alpha = (input$false_signal) / 100
+      ), 4))
+    }
+  })
 
   # Calculate CUSUM ----
   cs <- reactive({
     cusum((input$failure_prob / 100),
       patient_outcomes = data()$y,
-      limit = limit(),
+      limit = limit_d(),
       odds_multiplier = input$detection_level_d,
       reset = input$reset
     )
@@ -82,7 +100,7 @@ server <- function(input, output, session) {
   cs_i <- reactive({
     cusum((input$failure_prob/100),
           patient_outcomes = data()$y,
-          limit = -1,
+          limit = limit_i(),
           odds_multiplier = input$detection_level_i, 
           reset = input$reset)
   })
@@ -90,24 +108,36 @@ server <- function(input, output, session) {
   # Calculate other fixed term ----
   output$other_fixed_term <- renderText({
     if (input$fix_term == 2) {
-      alpha <- cusum_alpha_sim(
+      alpha_d <- cusum_alpha_sim(
         failure_probability = (input$failure_prob / 100),
         n_patients = nrow(data()),
         odds_multiplier = input$detection_level_d,
         n_simulation = input$n_sim,
-        limit = input$control_limit
+        limit = input$control_limit_d
       )
-      return(paste0("<B>Corresponding FSP:</B> ", round(alpha * 100, 2), "%"))
+      
+      alpha_i <- cusum_alpha_sim(
+        failure_probability = (input$failure_prob / 100),
+        n_patients = nrow(data()),
+        odds_multiplier = input$detection_level_i,
+        n_simulation = input$n_sim,
+        limit = input$control_limit_i
+      )
+      return(paste0("<B>Corresponding FSP:</B><br>",
+                    "Deterioriation: ", round(alpha_d * 100, 2), "% <br> ", 
+                    "Improvement:" , round(alpha_i * 100, 2), "%"))
     } else {
-      return(paste0("<B>Corresponding CL:</B> ", round(limit(), 2)))
+      return(paste0("<B>Corresponding CL:</B> <br>",
+                    "Deterioriation: ", round(limit_d(), 2), "<br>",
+                    "Improvement: " , round(limit_i(), 2)))
     }
   })
 
   # Output Plot ----
   output$distPlot <- renderPlot({
     plot <- ggplot(cs(), aes(x = t, y = ct)) +
-      geom_hline(aes(yintercept = limit()), size = 1, col = "#267ee2") +
-      geom_hline(aes(yintercept = -1), size = 1, col = "#267ee2")
+      geom_hline(aes(yintercept = limit_d()), size = 1, col = "#267ee2") +
+      geom_hline(aes(yintercept = limit_i()), size = 1, col = "#267ee2")
 
 
     signals <- cs()[cs()$signal == 1, ]
@@ -125,7 +155,7 @@ server <- function(input, output, session) {
       x <- data.frame(
         t = x,
         ct = cs()$ct[x],
-        y = rep(limit(), nrow(x))
+        y = rep(limit_d(), nrow(x))
       )
       plot <- plot + geom_point(
         data = x,
@@ -151,7 +181,7 @@ server <- function(input, output, session) {
       x <- data.frame(
         t = x,
         ct = cs_i()$ct[x],
-        y = rep(limit(), nrow(x))
+        y = rep(limit_d(), nrow(x))
       )
       
       plot <- plot + geom_point(
