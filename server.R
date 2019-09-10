@@ -1,7 +1,6 @@
 library(cusum)
 library(ggplot2)
 library(dplyr)
-library(cowplot)
 
 load("data/example_data.RData")
 load("data/ra_example_data.RData")
@@ -125,11 +124,11 @@ server <- function(input, output, session) {
       )
       return(paste0("<B>Corresponding FSP:</B><br>",
                     "Deterioriation: ", round(alpha_d * 100, 2), "% <br> ", 
-                    "Improvement:" , round(alpha_i * 100, 2), "%"))
+                    "Improvement: " , round(alpha_i * 100, 2), "%"))
     } else {
       return(paste0("<B>Corresponding CL:</B> <br>",
                     "Deterioriation: ", round(limit_d(), 2), "<br>",
-                    "Improvement: " , round(limit_i(), 2)))
+                    "Improvement: " , round(limit_i(),2)))
     }
   })
 
@@ -230,35 +229,87 @@ server <- function(input, output, session) {
     }
     return(x)
   })
+  
+  output$signals_i <- renderTable({
+    signals <- cs_i()[cs_i()$signal == 1, ]
+    x <- NULL
+    if (nrow(signals) > 0) {
+      if (nrow(signals) > 1) {
+        for (i in 2:nrow(signals) - 1) {
+          if ((signals$t[i + 1] - signals$t[i]) > 1) {
+            x <- rbind(x, signals$t[i + 1])
+          }
+        }
+      }
+      
+      x <- rbind(x, min(signals$t))
+      x <- data.frame(
+        Observation = as.integer(x),
+        CUSUM_value = cs_i()$ct[x]
+      )
+      x <- x[order(x$Observation), ]
+    } else {
+      x <- data.frame(
+        Observation = 0,
+        CUSUM_value = 0
+      )
+    }
+    return(x)
+  })
 
 
 
   # Risk-adjusted CUSUM ----
 
   # Set RA Control Limit ----
-  limit_ra <- reactive({
-    if (input$cl_method == 1) {
+  limit_d_ra <- reactive({
+    #if (input$cl_method == 1) {
       if (input$fixed_term_ra == 2) {
-        return(input$control_limit_ra)
+        return(input$control_limit_d_ra)
       } else {
-        return(round(racusum_limit_sim(data_ra()$score, 
+        return(round(racusum_limit_sim(data_ra()$score,
                                        odds_multiplier = input$detection_level_ra, 
                                        alpha = (input$false_signal_ra / 100),
                                        n_simulation = input$n_sim_ra
-                                       )
-                     )
+                                       ), 2)
                )
       }
-    } else {
-      return(round(racusum_limit_dpcl(patient_risks = data_ra()$score, 
-                                      odds_multiplier = input$detection_level_ra, 
-                                      alpha = (input$false_signal_ra / 100),
-                                      N = input$n_sim_ra
-                                      )
-                   )
-             )
-    }
+    # } else {
+    #   return(round(racusum_limit_dpcl(patient_risks = data_ra()$score, 
+    #                                   odds_multiplier = input$detection_level_ra, 
+    #                                   alpha = (input$false_signal_ra / 100),
+    #                                   N = input$n_sim_ra
+    #                                   )
+    #                )
+    #          )
+    # }
   })
+  
+  limit_i_ra <- reactive({
+    #if (input$cl_method == 1) {
+    if (input$fixed_term_ra == 2) {
+      return(input$control_limit_i_ra)
+    } else {
+      return(round(
+        racusum_limit_sim(data_ra()$score,
+                          odds_multiplier = input$detection_level_ra_i, 
+                          alpha = (input$false_signal_ra / 100),
+                          n_simulation = input$n_sim_ra
+                          ), 2
+        )
+        )
+    }
+    # } else {
+    #   return(round(racusum_limit_dpcl(patient_risks = data_ra()$score, 
+    #                                   odds_multiplier = input$detection_level_ra, 
+    #                                   alpha = (input$false_signal_ra / 100),
+    #                                   N = input$n_sim_ra
+    #                                   )
+    #                )
+    #          )
+    # }
+  })
+  
 
 
   # Calculate RA-CUSUM ----
@@ -266,17 +317,54 @@ server <- function(input, output, session) {
     racusum(
       patient_risks = data_ra()$score,
       patient_outcomes = data_ra()$y,
-      limit = limit_ra(),
+      limit = limit_d_ra(),
       odds_multiplier = input$detection_level_ra,
       reset = input$reset_ra
     )
   })
+  
+  cs_ra_i <- reactive({
+    racusum(
+      patient_risks = data_ra()$score,
+      patient_outcomes = data_ra()$y,
+      limit = limit_i_ra(),
+      odds_multiplier = input$detection_level_ra_i,
+      reset = input$reset_ra
+    )
+  })
+  
+  # Calculate other RA fixed term ----
+  output$other_fixed_term_ra <- renderText({
+    if (input$fixed_term_ra == 2) {
+      alpha_d_ra <- racusum_alpha_sim(
+        patient_risks = data_ra()$score,
+        odds_multiplier = input$detection_level_ra,
+        n_simulation = input$n_sim_ra,
+        limit = limit_d_ra()
+      )
+      
+      alpha_i_ra <- racusum_alpha_sim(
+        patient_risks = data_ra()$score,
+        odds_multiplier = input$detection_level_ra_i,
+        n_simulation = input$n_sim_ra,
+        limit = limit_i_ra()
+      )
+      return(paste0("<B>Corresponding FSP:</B><br>",
+                    "Deterioriation: ", round(alpha_d_ra * 100, 2), "% <br> ", 
+                    "Improvement: " , round(alpha_i_ra * 100, 2), "%"))
+    } else {
+      return(paste0("<B>Corresponding CL:</B> <br>",
+                    "Deterioriation: ", limit_d_ra(), "<br>",
+                    "Improvement: " , limit_i_ra()))
+    }
+  })
+  
 
   ## Output RA-Plot ----
   output$plot_ra <- renderPlot({
     plot <- ggplot(cs_ra(), aes(x = t, y = ct)) +
-      geom_line(aes(y = limit_ra(), x = t), size = 1, col = "#267ee2")
-    
+      geom_line(aes(y = limit_d_ra(), x = t), size = 1, col = "#267ee2") +
+      geom_line(aes(y = limit_i_ra(), x = t), size = 1, col = "#267ee2")
     
      signals <- cs_ra()[cs_ra()$signal == 1, ]
 
@@ -302,9 +390,37 @@ server <- function(input, output, session) {
         pch = 8, stroke = 2
       )
     }
+     
+     signals_i <- cs_ra_i()[cs_ra_i()$signal == 1, ]
+     
+     if (nrow(signals_i) > 0) {
+       x <- NULL
+       if (nrow(signals_i) > 1) {
+         for (i in 2:nrow(signals_i) - 1) {
+           if ((signals_i$t[i + 1] - signals_i$t[i]) > 1) {
+             x <- rbind(x, signals_i$t[i + 1])
+           }
+         }
+       }
+       x <- rbind(x, min(signals_i$t))
+       x <- data.frame(
+         t = x,
+         ct = cs_ra_i()$ct[x]
+       )
+       plot <- plot + geom_point(
+         data = x,
+         aes(x = t, y = ct),
+         col = "#3eb517",
+         size = 4,
+         pch = 8, stroke = 2
+       )
+     }
      plot +
        geom_line() +
        geom_point(size = 1) +
+       geom_line(data = cs_ra_i(), aes(x = t, y = ct)) +
+       geom_point(data = cs_ra_i(), aes(x = t, y = ct), size = 1) +
+       geom_hline(aes(yintercept = 0))+ 
        theme_bw() +
        scale_x_continuous(name = "Sequence of observation") +
        scale_y_continuous(name = "RA-CUSUM Statistic") 
@@ -318,9 +434,65 @@ server <- function(input, output, session) {
       header = input$header, sep = input$sep,
       quote = input$quote
     )
-    return(summary(df))
+    return(head(df,input$head))
   })
 
+  # Output RA Signals ----
+  output$signals_ra <- renderTable({
+    signals <- cs_ra()[cs_ra()$signal == 1, ]
+    x <- NULL
+    if (nrow(signals) > 0) {
+      if (nrow(signals) > 1) {
+        for (i in 2:nrow(signals) - 1) {
+          if ((signals$t[i + 1] - signals$t[i]) > 1) {
+            x <- rbind(x, signals$t[i + 1])
+          }
+        }
+      }
+      
+      x <- rbind(x, min(signals$t))
+      x <- data.frame(
+        Observation = as.integer(x),
+        CUSUM_value = cs_ra()$ct[x]
+      )
+      x <- x[order(x$Observation), ]
+    } else {
+      x <- data.frame(
+        Observation = 0,
+        CUSUM_value = 0
+      )
+    }
+    return(x)
+  })
+  
+  output$signals_i_ra <- renderTable({
+    signals <- cs_ra_i()[cs_ra_i()$signal == 1, ]
+    x <- NULL
+    if (nrow(signals) > 0) {
+      if (nrow(signals) > 1) {
+        for (i in 2:nrow(signals) - 1) {
+          if ((signals$t[i + 1] - signals$t[i]) > 1) {
+            x <- rbind(x, signals$t[i + 1])
+          }
+        }
+      }
+      
+      x <- rbind(x, min(signals$t))
+      x <- data.frame(
+        Observation = as.integer(x),
+        CUSUM_value = cs_ra_i()$ct[x]
+      )
+      x <- x[order(x$Observation), ]
+    } else {
+      x <- data.frame(
+        Observation = 0,
+        CUSUM_value = 0
+      )
+    }
+    return(x)
+  })
+  
+  
   # Downloadable csv of selected dataset ----
   output$downloadData <- downloadHandler(
     filename = function() {
