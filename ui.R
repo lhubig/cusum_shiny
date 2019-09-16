@@ -361,12 +361,25 @@ ui <- fluidPage(
                     tabsetPanel(
                     tabPanel("CUSUM Charts",
                              tags$br(),
-                             p("CUSUM charts monitor a process for any performance change. In this non-risk-adjusted case, every subjects has the same risk of failure."),
-                             p("The tabular CUSUM consists of two distinct CUSUM runs. 
+                             withMathJax(),
+                            
+                             helpText("CUSUM charts monitor a process for any performance change. The tabular CUSUM consists of two distinct CUSUM runs. 
                                The CUSUM run detecting performance", tags$b("deteriorations"), "is restricted to non-negative values and the CUSUM run detecting performance ", tags$b("improvements") ,"to non-positive."),
+                             helpText("For signaling process deterioration: \\( {C_t}^d = \\text{max}(0, C_{t-1} + W_t),\\; t = 1,2,3, \\dots\\)"),
+                             helpText("For signaling process improvements: \\( {C_t}^i = \\text{min}(0, C_{t-1} - W_t),\\; t = 1,2,3, \\dots\\)"),
                              
-                             p("If risk-adjustment is available, i.e. patient-individual risk scores, the risk-adjusted CUSUM", tags$b("RA-CUSUM"), "can be used. 
-                               Instead of specifying a global baseline failure probability, each patient has its individual risk probability, that results in individual CUSUM weights.")
+                             helpText("In the simplest, non-risk-adjusted case ", tags$b("(Standard CUSUM)"), " every subjects has the same risk of failure, calculated as the log-likelihood:"),
+                             helpText("\\( W_t =\\text{log}\\left(\\frac{c_A}{c_0}\\right)\\) if the person had an adverse event/negative outcome; 
+                                       \\(W_t = \\text{log}\\left(\\frac{1-c_A}{1-c_0}\\right) \\) if the person had no adverse event/positive outcome."),
+                             helpText("Here, \\(c_0\\) is the baseline failure probability and \\(c_A\\) the lowest failure probability that is detectable by the CUSUM chart."),
+                        
+                             
+                             helpText("If risk-adjustment is available, i.e. patient-individual risk scores, the risk-adjusted CUSUM", tags$b("(RA-CUSUM)"), "can be calculated. 
+                               Instead of specifying a global baseline failure probability, each patient has its individual risk probability that results in individual CUSUM weights."),
+                             helpText("\\( W_t = \\text{log}\\left(\\frac{R_A}{1-p_t + R_A p_t}\\right) \\) if the person had an adverse event/negative outcome.
+                                      \\(W_t = \\text{log}\\left(\\frac{1}{1-p_t + R_A p_t}\\right)\\) if the person had no adverse event/positive outcome."),
+                             
+                             helpText("The CUSUM signals a process change if the CUSUM statistic \\(C_t\\) crosses than the control limit.")
                              ),
                     tabPanel("Customize CUSUM Chart",
                              tags$br(),
@@ -384,10 +397,10 @@ ui <- fluidPage(
                              "After a signal (and its successful intervention), the CUSUM can be restarted by resetting the CUSUM to 0.",
                              h4(tags$b("Fixed Parameter")),
                              p("Specifies either ", tags$b("Control Limits (CL)"), "or the ", tags$b("False Signal Probability (FSP)"), ", which are dependent on each other. 
-                             CLs signal a performance change, wider CLs result in fewer signals and a lower FSP, and tighter CLs in more signals. 
+                             CLs signal a performance change, wider CLs result in fewer signals and a lower FSP, tighter CLs in more signals. 
                                The FSP is the type 1 error rate of this CUSUM chart, the probability of a signal when the process is truly in control. 
                                It makes more sense to set the FSP and estimate the corresponding CL, and use the fixed CL setting only when evaluating existing CUSUM charts."),
-                             p("For a more exact simulation, the number of simulations can be changed by clicking on the gearbox-button.")
+                             p("For a more exact simulation, the number of simulations can be changed in the gearbox setting. Be aware that large simulations may take awhile to load.")
                              ),
                     tabPanel("Interpret Results",
                              tags$br(),
@@ -400,7 +413,7 @@ ui <- fluidPage(
                              p("The observations that trigger a new signal are returned below the CUSUM chart. If the previous observation is already outside the control limit, the observation is not returned in the table."),
                              p("These observations can be used as a starting point for investigations. 
                                A process change likely occurred around these observations. 
-                               Notice, that previous adverse events should also be investigated, as all these built up the CUSUM and triggered the signal.")
+                               Notice that previous adverse events should also be investigated, as they all built up the CUSUM and triggered the signal.")
                              ),
                     
                     # tabPanel("Risk-adjusted CUSUM",
@@ -440,7 +453,7 @@ ui <- fluidPage(
                              ),
                     tabPanel("Literature",
                              tags$br(),
-                             p("For a general introduction in Statistical Process Control: 
+                             p("For a general introduction to Statistical Process Control: 
                                Montgomery, D. C.", 
                                tags$a(href = "http://dl4a.org/uploads/pdf/581SPC.pdf" , 
                                       "Introduction to statistical quality control."
@@ -454,9 +467,12 @@ ui <- fluidPage(
                                         ),
                                  "Biostatistics 1, 441–452 (2000)."
                                  ),
-                             p("For an introduction and analysis of specifing parameters and simulate control limits: Hubig, L., Lack, N., Mansmann, U. 
-                               Statistical Process Monitoring to Improve Quality Assurance of Inpatient Care. Manuscript submitted for publication (2019).")
+                             p("For an introduction and analysis of specified parameters and simulate control limits: Hubig, L., Lack, N., Mansmann, U. 
+                               Statistical Process Monitoring to Improve Quality Assurance of Inpatient Care. Manuscript submitted for publication (2019)."),
+                             p("For an overview of the ", tags$b("cusum"),  "R-Package take a look at the vignettes and package documentation available on ", 
+                               tags$a(href = "https://cran.rstudio.com//web/packages/cusum/index.html", "CRAN."))
                              )
+                    
                     )
                     )
              )
